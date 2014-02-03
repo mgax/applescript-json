@@ -59,9 +59,21 @@ end
 
 
 on createDict()
+	set item_list to {}
+
 	script Dict
+		on setkv(key, value)
+			copy {key: key, value: value} to end of item_list
+		end
+
 		on toJson()
-			return "{}"
+			set item_strings to {}
+			repeat with kv in item_list
+				set key_str to encodeString(key of kv)
+				set value_str to encode(value of kv)
+				copy key_str & ": " & value_str to end of item_strings
+			end
+			return "{" & joinListOfStrings(item_strings) & "}"
 		end
 	end
 

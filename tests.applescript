@@ -34,5 +34,12 @@ assert_eq(json's encode({1, 2, 3}), "[1, 2, 3]")
 
 set dict to json's createDict()
 assert_eq(json's encode(dict), "{}")
+dict's setkv("foo", "bar")
+assert_eq(json's encode(dict), "{\"foo\": \"bar\"}")
+
+set dict2 to json's createDict()
+dict2's setkv("a", 13)
+dict2's setkv("b", {2, "other", dict})
+assert_eq(json's encode(dict2), "{\"a\": 13, \"b\": [2, \"other\", {\"foo\": \"bar\"}]}")
 
 log "ok"
