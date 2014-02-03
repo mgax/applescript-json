@@ -19,11 +19,7 @@ on encodeList(value_list)
 	repeat with value in value_list
 		copy encode(value) to end of out_list
 	end
-	set original_delimiter to AppleScript's text item delimiters
-	set AppleScript's text item delimiters to ", "
-	set rv to "[" & (out_list as text) & "]"
-	set AppleScript's text item delimiters to original_delimiter
-	return rv
+	return "[" & joinListOfStrings(out_list) & "]"
 end
 
 
@@ -38,6 +34,15 @@ on encodeString(value)
 		set rv to rv & quoted_ch
 	end
 	return "\"" & rv & "\""
+end
+
+
+on joinListOfStrings(value_list)
+	set original_delimiter to AppleScript's text item delimiters
+	set AppleScript's text item delimiters to ", "
+	set rv to value_list as text
+	set AppleScript's text item delimiters to original_delimiter
+	return rv
 end
 
 
