@@ -13,5 +13,14 @@ on assert_eq(a, b)
 end
 
 
+assert_eq(json's hex4(0), "0000")
+assert_eq(json's hex4(1), "0001")
+assert_eq(json's hex4(11), "000b")
+assert_eq(json's hex4(2*16), "0020")
+assert_eq(json's hex4(65534), "fffe")
+assert_eq(json's hex4(65535), "ffff")
+assert_eq(json's hex4(65536), "0000")
+assert_eq(json's hex4(65537), "0001")
+
 assert_eq(json's jsonEncode("foo"), "\"foo\"")
 log "ok"
