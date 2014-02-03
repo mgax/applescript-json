@@ -1,3 +1,3 @@
 on jsonEncode(value)
-	log value as text
+	return "\"" & value as text & "\""
 end jsonEncode
