@@ -17,6 +17,9 @@ end
 set json to load script (json_path as alias)
 ```
 
+Alternatively, just copy/paste the contens of `json.applescript` into
+your own script, and use it straigt away.
+
 ### Usage
 
 To encode strings, numbers and lists:
