@@ -32,4 +32,7 @@ assert_eq(json's encode("ș"), "\"\\u0219\"")
 
 assert_eq(json's encode({1, 2, 3}), "[1, 2, 3]")
 
+set dict to json's createDict()
+assert_eq(json's encode(dict), "{}")
+
 log "ok"

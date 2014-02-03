@@ -6,6 +6,8 @@ on encode(value)
 		return encodeString(value)
 	else if type = list
 		return encodeList(value)
+	else if type = script
+		return value's toJson()
 	else
 		error "Unknown type " & type
 	end
@@ -48,4 +50,15 @@ on hex4(n)
 		set rv to (character (1+digit) of digit_list) & rv
 	end
 	return rv
+end
+
+
+on createDict()
+	script Dict
+		on toJson()
+			return "{}"
+		end
+	end
+
+	return Dict
 end
