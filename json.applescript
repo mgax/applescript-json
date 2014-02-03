@@ -1,6 +1,8 @@
 on encode(value)
 	set type to class of value
-	if type = text
+	if type = integer
+		return value as text
+	else if type = text
 		return encodeString(value)
 	else
 		error "Unknown type " & type
