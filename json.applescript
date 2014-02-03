@@ -9,6 +9,16 @@ end jsonEncode
 
 
 on jsonEncodeString(value)
+	set rv to ""
+	repeat with ch in value
+		if id of ch >= 32 and id of ch < 127
+			set quoted_ch to ch
+		else
+			set quoted_ch to "\\u" & hex4(id of ch)
+		end
+		set rv to rv & quoted_ch
+	end
+	return "\"" & rv & "\""
 end
 
 
