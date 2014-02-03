@@ -19,7 +19,7 @@ on encodeList(value_list)
 	repeat with value in value_list
 		copy encode(value) to end of out_list
 	end
-	return "[" & joinListOfStrings(out_list) & "]"
+	return "[" & join(out_list, ", ") & "]"
 end
 
 
@@ -37,9 +37,9 @@ on encodeString(value)
 end
 
 
-on joinListOfStrings(value_list)
+on join(value_list, delimiter)
 	set original_delimiter to AppleScript's text item delimiters
-	set AppleScript's text item delimiters to ", "
+	set AppleScript's text item delimiters to delimiter
 	set rv to value_list as text
 	set AppleScript's text item delimiters to original_delimiter
 	return rv
@@ -73,7 +73,7 @@ on createDict()
 				set value_str to encode(value of kv)
 				copy key_str & ": " & value_str to end of item_strings
 			end
-			return "{" & joinListOfStrings(item_strings) & "}"
+			return "{" & join(item_strings, ", ") & "}"
 		end
 	end
 
