@@ -58,7 +58,7 @@ on hex4(n)
 end
 
 
-on createDict()
+on createDictWith(item_pairs)
 	set item_list to {}
 
 	script Dict
@@ -77,5 +77,14 @@ on createDict()
 		end
 	end
 
+	repeat with pair in item_pairs
+		Dict's setkv(item 1 of pair, item 2 of pair)
+	end
+
 	return Dict
+end
+
+
+on createDict()
+	return createDictWith({})
 end
