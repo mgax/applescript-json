@@ -1,14 +1,14 @@
-on jsonEncode(value)
+on encode(value)
 	set type to class of value
 	if type = text
-		return jsonEncodeString(value)
+		return encodeString(value)
 	else
 		error "Unknown type " & type
 	end
-end jsonEncode
+end
 
 
-on jsonEncodeString(value)
+on encodeString(value)
 	set rv to ""
 	repeat with ch in value
 		if id of ch >= 32 and id of ch < 127

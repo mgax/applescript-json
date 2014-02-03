@@ -22,9 +22,9 @@ assert_eq(json's hex4(65535), "ffff")
 assert_eq(json's hex4(65536), "0000")
 assert_eq(json's hex4(65537), "0001")
 
-assert_eq(json's jsonEncode("foo"), "\"foo\"")
-assert_eq(json's jsonEncode(""), "\"\"")
-assert_eq(json's jsonEncode("\n"), "\"\\u000a\"")
-assert_eq(json's jsonEncode("ș"), "\"\\u0219\"")
+assert_eq(json's encode("foo"), "\"foo\"")
+assert_eq(json's encode(""), "\"\"")
+assert_eq(json's encode("\n"), "\"\\u000a\"")
+assert_eq(json's encode("ș"), "\"\\u0219\"")
 
 log "ok"
