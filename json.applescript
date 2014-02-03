@@ -4,9 +4,24 @@ on encode(value)
 		return value as text
 	else if type = text
 		return encodeString(value)
+	else if type = list
+		return encodeList(value)
 	else
 		error "Unknown type " & type
 	end
+end
+
+
+on encodeList(value_list)
+	set out_list to {}
+	repeat with value in value_list
+		copy encode(value) to end of out_list
+	end
+	set original_delimiter to AppleScript's text item delimiters
+	set AppleScript's text item delimiters to ", "
+	set rv to "[" & (out_list as text) & "]"
+	set AppleScript's text item delimiters to original_delimiter
+	return rv
 end
 
 
