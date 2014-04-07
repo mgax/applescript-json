@@ -1,4 +1,45 @@
+on decode(value)
+	set s to "import json" & return
+	set s to s & "def toAppleScript(pythonValue):" & return
+	set s to s & "    output = ''" & return
+	set s to s & "    if(pythonValue == None):" & return
+	set s to s & "        output += 'null'" & return
+	set s to s & "    elif (isinstance(pythonValue, dict)):" & return
+	set s to s & "        output += '{'" & return
+	set s to s & "        first = True" & return
+	set s to s & "        for (key, value) in pythonValue.iteritems():" & return
+	set s to s & "            if first:" & return
+	set s to s & "                first = False" & return
+	set s to s & "            else:" & return
+	set s to s & "                output += ','" & return
+	set s to s & "            output += key + ':' " & return
+	set s to s & "            output += toAppleScript(value)" & return
+	set s to s & "        output += '}'" & return
+	set s to s & "    elif (isinstance(pythonValue, list)):" & return
+	set s to s & "        output += '['" & return
+	set s to s & "        first = True" & return
+	set s to s & "        for value in pythonValue:" & return
+	set s to s & "            if first:" & return
+	set s to s & "                first = False" & return
+	set s to s & "            else:" & return
+	set s to s & "                output += ','" & return
+	set s to s & "            output += toAppleScript(value)" & return
+	set s to s & "        output += ']'" & return
+	set s to s & "    else:" & return
+	set s to s & "        output += json.dumps(pythonValue)" & return
+	set s to s & "    return output" & return
+	set s to s & "print toAppleScript(json.loads(" & quoted form of value & "))"
+	set appleCode to do shell script "python2.7 -c  " & quoted form of s
+	set s to "on run " & return
+	set s to s & appleCode & return
+	set s to s & "end"
+	return (run script s)
+end decode
+
 on encode(value)
+	if value = null then
+		return "null"
+	end if
 	set type to class of value
 	if type = integer then
 		return value as text
@@ -89,60 +130,73 @@ on createDict()
 	return createDictWith({})
 end createDict
 
-on split(aString, aDelimiters)
-	set oldDelimiters to AppleScript's text item delimiters
-	set AppleScript's text item delimiters to aDelimiters
-	set theArray to every text item of aString
-	set AppleScript's text item delimiters to aDelimiters
-	return theArray
-end split
-
 on recordToString(aRecord)
+	try
+		set str to aRecord as text
+	on error errorMsg
+		set startindex to 1
+		set eos to length of errorMsg
+		repeat until startindex is eos
+			if character startindex of errorMsg = "{" then
+				exit repeat
+			end if
+			set startindex to startindex + 1
+		end repeat
+		set endindex to eos
+		repeat until endindex is 1
+			if character endindex of errorMsg = "}" then
+				exit repeat
+			end if
+			set endindex to endindex - 1
+		end repeat
+		set str to ((characters startindex thru endindex of errorMsg) as string)
+		if startindex < endindex then
+			return str
+		end if
+	end try
 	set oldClipboard to the clipboard
-	set the clipboard to aRecord
-	set str to (do shell script "osascript -e 'the clipboard as record'")
+	set the clipboard to {aRecord}
+	set str to (do shell script "osascript -s s -e 'the clipboard as record'")
 	set the clipboard to oldClipboard
+	set str to ((characters 8 thru -1 of str) as string)
+	set str to ((characters 1 thru -3 of str as string))
 	return str
 end recordToString
 
-on getValueFromKey(aRecord, aKey)
-	set s to "on run {aRecord}" & return
-	set s to s & "get " & aKey & " of aRecord" & return
-	set s to s & "end"
-	return (run script s with parameters {aRecord})
-end getValueFromKey
-
-on recordKeys(value_record)
-	set str to recordToString(value_record)
-	set tokens to split(str, {":", ","})
-	set possibleKeys to {}
-	repeat with token in tokens
-		set possibleKey to trim(change_case(token, "lower"))
-		if possibleKey is not in possibleKeys then
-			set end of possibleKeys to possibleKey
-		end if
-	end repeat
-	set recordKeyList to {}
-	repeat with possibleKey in possibleKeys
-		try
-			getValueFromKey(value_record, possibleKey)
-			--If not found we do not reach this
-			set end of recordKeyList to ("" & possibleKey)
-		end try
-	end repeat
-	if (count recordKeyList) is not (count value_record) then
-		error "recordKeys could not successfully recover all keys in the given record"
-	end if
-	return recordKeyList
-end recordKeys
-
 on encodeRecord(value_record)
-	set keys to recordKeys(value_record)
-	set dictionary to createDict()
-	repeat with recordKey in keys
-		dictionary's setkv(recordKey, getValueFromKey(value_record, recordKey))
-	end repeat
-	return encode(dictionary)
+	set strRepr to recordToString(value_record)
+	set s to "import json, token, tokenize" & return
+	set s to s & "from StringIO import StringIO" & return
+	set s to s & "def appleScriptNotationToJSON (in_text):" & return
+	set s to s & "    tokengen = tokenize.generate_tokens(StringIO(in_text).readline)" & return
+	set s to s & "    depth = 0" & return
+	set s to s & "    opstack = []" & return
+	set s to s & "    result = []" & return
+	set s to s & "    for tokid, tokval, _, _, _ in tokengen:" & return
+	set s to s & "        if (tokid == token.NAME):" & return
+	set s to s & "            if tokval not in ['true', 'false', 'null', '-Infinity', 'Infinity', 'NaN']:" & return
+	set s to s & "                tokid = token.STRING" & return
+	set s to s & "                tokval = u'\"%s\"' % tokval" & return
+	set s to s & "        elif (tokid == token.STRING):" & return
+	set s to s & "            if tokval.startswith (\"'\"):" & return
+	set s to s & "                tokval = u'\"%s\"' % tokval[1:-1].replace ('\"', '\\\\\"')" & return
+	set s to s & "        elif (tokid == token.OP) and ((tokval == '}') or (tokval == ']')):" & return
+	set s to s & "            if (len(result) > 0) and (result[-1][1] == ','):" & return
+	set s to s & "                result.pop()" & return
+	set s to s & "            tokval = '}' if result[opstack[-1]][1] == '{' else ']'" & return
+	set s to s & "            opstack.pop()" & return
+	set s to s & "        elif (tokid == token.OP) and (tokval == '{' or tokval == ']'):" & return
+	set s to s & "            tokval = '['" & return
+	set s to s & "            opstack.append(len(result))" & return
+	set s to s & "        elif (tokid == token.OP) and (tokval == ':') and result[opstack[-1]][1] != '}':" & return
+	set s to s & "            result[opstack[-1]] = (result[opstack[-1]][0], '{')" & return
+	set s to s & "        elif (tokid == token.STRING):" & return
+	set s to s & "            if tokval.startswith (\"'\"):" & return
+	set s to s & "                tokval = u'\"%s\"' % tokval[1:-1].replace ('\"', '\\\\\"')" & return
+	set s to s & "        result.append((tokid, tokval))" & return
+	set s to s & "    return tokenize.untokenize(result)" & return
+	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(u" & quoted form of strRepr & " )))" & return
+	return (do shell script "python2.7 -c  " & quoted form of s)
 end encodeRecord
 
 on trim(someText)
@@ -154,38 +208,9 @@ on trim(someText)
 		set someText to text 1 thru -2 of someText
 	end repeat
 	
-	return someText
+	return someText as string
 end trim
-property lower_alphabet : "abcdefghijklmnopqrstuvwxyz"
-property upper_alphabet : "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-property white_space : {space, tab, return, ASCII character 10, ASCII character 13}
-on change_case(this_text, this_case)
-	set new_text to ""
-	if this_case is not in {"UPPER", "lower", "Title", "Sentence"} then
-		return "Error: Case must be UPPER, lower, Title or Sentence"
-	end if
-	if this_case is "lower" then
-		set use_capital to false
-	else
-		set use_capital to true
-	end if
-	repeat with this_char in this_text
-		set x to offset of this_char in lower_alphabet
-		if x is not 0 then
-			if use_capital then
-				set new_text to new_text & character x of upper_alphabet as string
-				if this_case is not "UPPER" then
-					set use_capital to false
-				end if
-			else
-				set new_text to new_text & character x of lower_alphabet as string
-			end if
-		else
-			if this_case is "Title" and this_char is in white_space then
-				set use_capital to true
-			end if
-			set new_text to new_text & this_char as string
-		end if
-	end repeat
-	return new_text
-end change_case
+
+on toLowerCase(input)
+	return (do shell script ("echo " & quoted form of input & " | tr '[:upper:]' '[:lower:]'"))
+end toLowerCase
