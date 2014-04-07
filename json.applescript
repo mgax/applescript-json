@@ -27,7 +27,7 @@ end encodeList
 on encodeString(value)
 	set rv to ""
 	repeat with ch in value
-		if id of ch â‰¥ 32 and id of ch < 127 then
+		if id of ch ³ 32 and id of ch < 127 then
 			set quoted_ch to ch
 		else
 			set quoted_ch to "\\u" & hex4(id of ch)
