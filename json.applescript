@@ -1,5 +1,5 @@
 on decode(value)
-	set s to "import json" & return
+	set s to "import json, sys" & return
 	set s to s & "def toAppleScript(pythonValue):" & return
 	set s to s & "    output = ''" & return
 	set s to s & "    if(pythonValue == None):" & return
@@ -25,11 +25,15 @@ on decode(value)
 	set s to s & "                output += ','" & return
 	set s to s & "            output += toAppleScript(value)" & return
 	set s to s & "        output += ']'" & return
+	set s to s & "    elif(isinstance(pythonValue, basestring)):" & return
+	set s to s & "        output += '\"' + pythonValue.replace('\"', '\\\\\"') + '\"'" & return
 	set s to s & "    else:" & return
 	set s to s & "        output += json.dumps(pythonValue)" & return
 	set s to s & "    return output" & return
-	set s to s & "print toAppleScript(json.loads(" & quoted form of value & "))"
-	set appleCode to do shell script "python2.7 -c  " & quoted form of s
+	-- sys.stdout to be able to write utf8 to our buffer
+	set s to s & "sys.stdout.write(toAppleScript(json.loads(" & quoted form of value & ")).encode('utf8'))"
+	-- AppleScript translates new lines in old mac returns so we need to turn that off
+	set appleCode to do shell script "python2.7 -c  " & quoted form of s without altering line endings
 	set s to "on run " & return
 	set s to s & appleCode & return
 	set s to s & "end"
@@ -37,12 +41,9 @@ on decode(value)
 end decode
 
 on encode(value)
-	if value = null then
-		return "null"
-	end if
 	set type to class of value
-	if type = integer then
-		return value as text
+	if type = integer or type = real then
+		return replaceString(value as text, ",", ".")
 	else if type = text then
 		return encodeString(value)
 	else if type = list then
@@ -51,6 +52,8 @@ on encode(value)
 		return value's toJson()
 	else if type = record then
 		return encodeRecord(value)
+	else if type = class and (value as text) = "null" then
+		return "null"
 	else
 		error "Unknown type " & type
 	end if
@@ -68,7 +71,9 @@ end encodeList
 on encodeString(value)
 	set rv to ""
 	repeat with ch in value
-		if id of ch ³ 32 and id of ch < 127 then
+		if id of ch = 34 or id of ch = 92 then
+			set quoted_ch to "\\" & ch
+		else if id of ch ³ 32 and id of ch < 127 then
 			set quoted_ch to ch
 		else
 			set quoted_ch to "\\u" & hex4(id of ch)
@@ -87,6 +92,15 @@ on join(value_list, delimiter)
 	return rv
 end join
 
+on replaceString(theText, oldString, newString)
+	set AppleScript's text item delimiters to oldString
+	set tempList to every text item of theText
+	set AppleScript's text item delimiters to newString
+	set theText to the tempList as string
+	set AppleScript's text item delimiters to ""
+	return theText
+end replaceString
+
 
 on hex4(n)
 	set digit_list to "0123456789abcdef"
@@ -104,9 +118,20 @@ on createDictWith(item_pairs)
 	set item_list to {}
 	
 	script Dict
-		on setkv(key, value)
+		on setValue(key, value)
+			set i to 1
+			set c to count item_list
+			repeat until i > c
+				set kv to item i of item_list
+				if item 1 of kv = key then
+					set item 2 of kv to value
+					set item i of item_list to kv
+					return
+				end if
+				set i to i + 1
+			end repeat
 			copy {key, value} to end of item_list
-		end setkv
+		end setValue
 		
 		on toJson()
 			set item_strings to {}
@@ -117,10 +142,23 @@ on createDictWith(item_pairs)
 			end repeat
 			return "{" & join(item_strings, ", ") & "}"
 		end toJson
+		
+		on getValue(key)
+			repeat with kv in item_list
+				if item 1 of kv = key then
+					return item 2 of kv
+				end if
+			end repeat
+			error "No such key " & key & " found."
+		end getValue
+		
+		on toRecord()
+			return decode(toJson())
+		end toRecord
 	end script
 	
 	repeat with pair in item_pairs
-		Dict's setkv(item 1 of pair, item 2 of pair)
+		Dict's setValue(item 1 of pair, item 2 of pair)
 	end repeat
 	
 	return Dict
@@ -164,7 +202,8 @@ on recordToString(aRecord)
 end recordToString
 
 on encodeRecord(value_record)
-	set strRepr to recordToString(value_record)
+	-- json can be used to escape a string for python
+	set strRepr to encode(recordToString(value_record))
 	set s to "import json, token, tokenize" & return
 	set s to s & "from StringIO import StringIO" & return
 	set s to s & "def appleScriptNotationToJSON (in_text):" & return
@@ -195,7 +234,7 @@ on encodeRecord(value_record)
 	set s to s & "                tokval = u'\"%s\"' % tokval[1:-1].replace ('\"', '\\\\\"')" & return
 	set s to s & "        result.append((tokid, tokval))" & return
 	set s to s & "    return tokenize.untokenize(result)" & return
-	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(u" & quoted form of strRepr & " )))" & return
+	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(" & strRepr & ")))" & return
 	return (do shell script "python2.7 -c  " & quoted form of s)
 end encodeRecord
 
