@@ -1,3 +1,61 @@
+on JSONRepresentation from variable
+	return encode(variable)
+end JSONRepresentation
+
+on JSONValue of variable given NativeEncoding:recordBool
+	if recordBool then
+		return decode(variable)
+	else
+		return decodeWithDicts(variable)
+	end if
+end JSONValue
+
+on Dictionary from variable
+	return createDictWith(variable)
+end Dictionary
+
+on decodeWithDicts(value)
+	set s to "import json, sys" & return
+	set s to s & "def toAppleScript(pythonValue):" & return
+	set s to s & "    output = ''" & return
+	set s to s & "    if(pythonValue == None):" & return
+	set s to s & "        output += 'null'" & return
+	set s to s & "    elif (isinstance(pythonValue, dict)):" & return
+	set s to s & "        output += 'json\\'s createDictWith({'" & return
+	set s to s & "        first = True" & return
+	set s to s & "        for (key, value) in pythonValue.iteritems():" & return
+	set s to s & "            if first:" & return
+	set s to s & "                first = False" & return
+	set s to s & "            else:" & return
+	set s to s & "                output += ','" & return
+	set s to s & "            output += '{' + json.dumps(key) + ',' " & return
+	set s to s & "            output += toAppleScript(value) + '}' " & return
+	set s to s & "        output += '})'" & return
+	set s to s & "    elif (isinstance(pythonValue, list)):" & return
+	set s to s & "        output += '{'" & return
+	set s to s & "        first = True" & return
+	set s to s & "        for value in pythonValue:" & return
+	set s to s & "            if first:" & return
+	set s to s & "                first = False" & return
+	set s to s & "            else:" & return
+	set s to s & "                output += ','" & return
+	set s to s & "            output += toAppleScript(value)" & return
+	set s to s & "        output += '}'" & return
+	set s to s & "    elif(isinstance(pythonValue, basestring)):" & return
+	set s to s & "        output += '\"' + pythonValue.replace('\"', '\\\\\"') + '\"'" & return
+	set s to s & "    else:" & return
+	set s to s & "        output += json.dumps(pythonValue)" & return
+	set s to s & "    return output" & return
+	-- sys.stdout to be able to write utf8 to our buffer
+	set s to s & "sys.stdout.write(toAppleScript(json.loads(" & quoted form of value & ")).encode('utf8'))"
+	-- AppleScript translates new lines in old mac returns so we need to turn that off
+	set appleCode to do shell script "python2.7 -c  " & quoted form of s without altering line endings
+	set s to "on run {json}" & return
+	set s to s & appleCode & return
+	set s to s & "end"
+	return (run script s with parameters {me})
+end decodeWithDicts
+
 on decode(value)
 	set s to "import json, sys" & return
 	set s to s & "def toAppleScript(pythonValue):" & return
@@ -16,7 +74,7 @@ on decode(value)
 	set s to s & "            output += toAppleScript(value)" & return
 	set s to s & "        output += '}'" & return
 	set s to s & "    elif (isinstance(pythonValue, list)):" & return
-	set s to s & "        output += '['" & return
+	set s to s & "        output += '{'" & return
 	set s to s & "        first = True" & return
 	set s to s & "        for value in pythonValue:" & return
 	set s to s & "            if first:" & return
@@ -24,7 +82,7 @@ on decode(value)
 	set s to s & "            else:" & return
 	set s to s & "                output += ','" & return
 	set s to s & "            output += toAppleScript(value)" & return
-	set s to s & "        output += ']'" & return
+	set s to s & "        output += '}'" & return
 	set s to s & "    elif(isinstance(pythonValue, basestring)):" & return
 	set s to s & "        output += '\"' + pythonValue.replace('\"', '\\\\\"') + '\"'" & return
 	set s to s & "    else:" & return
@@ -127,8 +185,8 @@ on createDictWith(item_pairs)
 	script Dict
 		on setValue(key, value)
 			set i to 1
-			set c to count item_list
-			repeat until i > c
+			set C to count item_list
+			repeat until i > C
 				set kv to item i of item_list
 				if item 1 of kv = key then
 					set item 2 of kv to value
