@@ -1,19 +1,3 @@
-on JSONRepresentation from variable
-	return encode(variable)
-end JSONRepresentation
-
-on JSONValue of variable given NativeEncoding:recordBool
-	if recordBool then
-		return decode(variable)
-	else
-		return decodeWithDicts(variable)
-	end if
-end JSONValue
-
-on Dictionary from variable
-	return createDictWith(variable)
-end Dictionary
-
 on decodeWithDicts(value)
 	set s to "import json, sys" & return
 	set s to s & "def toAppleScript(pythonValue):" & return
