@@ -75,14 +75,21 @@ on encodeString(value)
 			set quoted_ch to "\\" & ch
 		else if id of ch ³ 32 and id of ch < 127 then
 			set quoted_ch to ch
-		else
+		else if id of ch < 65536 then
 			set quoted_ch to "\\u" & hex4(id of ch)
+		else
+			set v to id of ch
+			set v_ to v - 65536
+			set vh to v_ / 1024
+			set vl to v_ mod 1024
+			set w1 to 55296 + vh
+			set w2 to 56320 + vl
+			set quoted_ch to "\\u" & hex4(w1) & "\\u" & hex4(w2)
 		end if
 		set rv to rv & quoted_ch
 	end repeat
 	return "\"" & rv & "\""
 end encodeString
-
 
 on join(value_list, delimiter)
 	set original_delimiter to AppleScript's text item delimiters
