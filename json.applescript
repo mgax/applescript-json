@@ -1,5 +1,6 @@
 on decodeWithDicts(value)
-	set s to "import json, sys" & return
+	set s to "import json, sys, codecs" & return
+	set s to s & "sys.stdin = codecs.getreader('utf8')(sys.stdin)" & return
 	set s to s & "def toAppleScript(pythonValue):" & return
 	set s to s & "    output = ''" & return
 	set s to s & "    if(pythonValue == None):" & return
@@ -31,9 +32,9 @@ on decodeWithDicts(value)
 	set s to s & "        output += json.dumps(pythonValue)" & return
 	set s to s & "    return output" & return
 	-- sys.stdout to be able to write utf8 to our buffer
-	set s to s & "sys.stdout.write(toAppleScript(json.loads(" & quoted form of value & ")).encode('utf8'))"
+	set s to s & "sys.stdout.write(toAppleScript(json.loads(sys.stdin.read())).encode('utf8'))"
 	-- AppleScript translates new lines in old mac returns so we need to turn that off
-	set appleCode to do shell script "python2.7 -c  " & quoted form of s without altering line endings
+	set appleCode to do shell script "echo " & quoted form of value & "  |python2.7 -c  " & quoted form of s without altering line endings
 	set s to "on run {json}" & return
 	set s to s & appleCode & return
 	set s to s & "end"
@@ -41,7 +42,8 @@ on decodeWithDicts(value)
 end decodeWithDicts
 
 on decode(value)
-	set s to "import json, sys" & return
+	set s to "import json, sys, codecs" & return
+	set s to s & "sys.stdin = codecs.getreader('utf8')(sys.stdin)" & return
 	set s to s & "def toAppleScript(pythonValue):" & return
 	set s to s & "    output = ''" & return
 	set s to s & "    if(pythonValue == None):" & return
@@ -73,9 +75,9 @@ on decode(value)
 	set s to s & "        output += json.dumps(pythonValue)" & return
 	set s to s & "    return output" & return
 	-- sys.stdout to be able to write utf8 to our buffer
-	set s to s & "sys.stdout.write(toAppleScript(json.loads(" & quoted form of value & ")).encode('utf8'))"
+	set s to s & "sys.stdout.write(toAppleScript(json.loads(sys.stdin.read())).encode('utf8'))"
 	-- AppleScript translates new lines in old mac returns so we need to turn that off
-	set appleCode to do shell script "python2.7 -c  " & quoted form of s without altering line endings
+	set appleCode to do shell script "echo " & quoted form of value & "  |python2.7 -c  " & quoted form of s without altering line endings
 	set s to "on run " & return
 	set s to s & appleCode & return
 	set s to s & "end"
@@ -89,7 +91,11 @@ on encode(value)
 	else if type = text then
 		return encodeString(value)
 	else if type = list then
-		return encodeList(value)
+		if listContainsRecord(value) then
+			return encodeRecord(value)
+		else
+			return encodeList(value)
+		end if
 	else if type = script then
 		return value's toJson()
 	else if type = record then
@@ -100,6 +106,20 @@ on encode(value)
 		error "Unknown type " & type
 	end if
 end encode
+
+on listContainsRecord(value)
+	repeat with element in value
+		set type to class of element
+		if type = list then
+			if listContainsRecord(element) then
+				return true
+			end if
+		else if type = record then
+			return true
+		end if
+	end repeat
+	return false
+end listContainsRecord
 
 on encodeList(value_list)
 	set out_list to {}
@@ -219,6 +239,14 @@ end createDict
 
 on recordToString(aRecord)
 	try
+		set type to class of aRecord
+		--This ensures applescript knows about the type
+		if class of aRecord = list then
+			set aRecord to aRecord as list
+		else
+			set aRecord to aRecord as record
+		end if
+		set aRecord to aRecord
 		set str to aRecord as text
 	on error errorMsg
 		set startindex to 1
@@ -252,9 +280,10 @@ end recordToString
 
 on encodeRecord(value_record)
 	-- json can be used to escape a string for python
-	set strRepr to encode(recordToString(value_record))
-	set s to "import json, token, tokenize" & return
+	set strRepr to recordToString(value_record)
+	set s to "import json, token, tokenize, sys, codecs" & return
 	set s to s & "from StringIO import StringIO" & return
+	set s to s & "sys.stdin = codecs.getreader('utf8')(sys.stdin)" & return
 	set s to s & "def appleScriptNotationToJSON (in_text):" & return
 	set s to s & "    tokengen = tokenize.generate_tokens(StringIO(in_text).readline)" & return
 	set s to s & "    depth = 0" & return
@@ -283,22 +312,35 @@ on encodeRecord(value_record)
 	set s to s & "                tokval = u'\"%s\"' % tokval[1:-1].replace ('\"', '\\\\\"')" & return
 	set s to s & "        result.append((tokid, tokval))" & return
 	set s to s & "    return tokenize.untokenize(result)" & return
-	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(" & strRepr & ")))" & return
-	return (do shell script "python2.7 -c  " & quoted form of s)
+	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(sys.stdin.read())))" & return
+	return (do shell script "echo " & quoted form of strRepr & "  | python2.7 -c  " & quoted form of s)
 end encodeRecord
 
-on trim(someText)
-	repeat until someText does not start with " "
-		set someText to text 2 thru -1 of someText
-	end repeat
-	
-	repeat until someText does not end with " "
-		set someText to text 1 thru -2 of someText
-	end repeat
-	
-	return someText as string
-end trim
+set aList to {}
+set dict3 to Â
+	{glossary:Â
+		{GlossDiv:Â
+			{GlossList:Â
+				{GlossEntry:Â
+					{GlossDef:Â
+						{GlossSeeAlso:Â
+							["GML", "XML"], para:"A 'meta-markup language, used to create markup languages such as DocBook."} Â
+							, GlossSee:"markup", Acronym:"SGML", GlossTerm:"Standard Generalized Markup Language", Abbrev:"ISO 8879:1986", SortAs:"SGML", id:Â
+						"SGML"} Â
+						}, title:"S"} Â
+				, title:"example glossary"} Â
+			}
+repeat 100 times
+	set end of aList to dict3
+end repeat
+set startTime to (get current date)
+encode(aList)
+set endTime to (get current date)
+set duration to endTime - startTime
+log duration
 
-on toLowerCase(input)
-	return (do shell script ("echo " & quoted form of input & " | tr '[:upper:]' '[:lower:]'"))
-end toLowerCase
+set startTime to (get current date)
+encode({aList:aList})
+set endTime to (get current date)
+set duration to endTime - startTime
+log duration
