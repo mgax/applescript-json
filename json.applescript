@@ -315,32 +315,3 @@ on encodeRecord(value_record)
 	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(sys.stdin.read())))" & return
 	return (do shell script "echo " & quoted form of strRepr & "  | python2.7 -c  " & quoted form of s)
 end encodeRecord
-
-set aList to {}
-set dict3 to Â
-	{glossary:Â
-		{GlossDiv:Â
-			{GlossList:Â
-				{GlossEntry:Â
-					{GlossDef:Â
-						{GlossSeeAlso:Â
-							["GML", "XML"], para:"A 'meta-markup language, used to create markup languages such as DocBook."} Â
-							, GlossSee:"markup", Acronym:"SGML", GlossTerm:"Standard Generalized Markup Language", Abbrev:"ISO 8879:1986", SortAs:"SGML", id:Â
-						"SGML"} Â
-						}, title:"S"} Â
-				, title:"example glossary"} Â
-			}
-repeat 100 times
-	set end of aList to dict3
-end repeat
-set startTime to (get current date)
-encode(aList)
-set endTime to (get current date)
-set duration to endTime - startTime
-log duration
-
-set startTime to (get current date)
-encode({aList:aList})
-set endTime to (get current date)
-set duration to endTime - startTime
-log duration
