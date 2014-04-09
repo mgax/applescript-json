@@ -14,7 +14,7 @@ on decodeWithDicts(value)
 	set s to s & "                first = False" & return
 	set s to s & "            else:" & return
 	set s to s & "                output += ','" & return
-	set s to s & "            output += '{\\\"' + key + '\\\",' " & return
+	set s to s & "            output += '{\\\"' + key.replace('\\\\', '\\\\\\\\').replace('\"', '\\\"') + '\\\",' " & return
 	set s to s & "            output += toAppleScript(value) + '}'" & return
 	set s to s & "        output += '})'" & return
 	set s to s & "    elif (isinstance(pythonValue, list)):" & return
