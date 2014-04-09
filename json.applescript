@@ -14,7 +14,7 @@ on decodeWithDicts(value)
 	set s to s & "                first = False" & return
 	set s to s & "            else:" & return
 	set s to s & "                output += ','" & return
-	set s to s & "            output += '{\\\"' + key.replace('\\\\', '\\\\\\\\').replace('\"', '\\\"') + '\\\",' " & return
+	set s to s & "            output += '{' + toAppleScript(key) + ',' " & return
 	set s to s & "            output += toAppleScript(value) + '}'" & return
 	set s to s & "        output += '})'" & return
 	set s to s & "    elif (isinstance(pythonValue, list)):" & return
@@ -38,7 +38,7 @@ on decodeWithDicts(value)
 	set value to replaceString(value, {return & linefeed, return, linefeed, character id 8233, character id 8232, character id 12, character id 9, character id 8}, "")
 	-- AppleScript translates new lines in old mac returns so we need to turn that off
 	set appleCode to do shell script "echo " & quoted form of value & " \"\\c\"  |python2.7 -c  " & quoted form of s without altering line endings
-	set appleCode to replaceString(appleCode, "\\", "\\\\")
+	set appleCode to replaceString(replaceString(appleCode, "\\", "\\\\"), "\\\"", "\"")
 	set s to "on run {json}" & return
 	set s to s & appleCode & return
 	set s to s & "end"
@@ -85,7 +85,7 @@ on decode(value)
 	set value to replaceString(value, {return & linefeed, return, linefeed, character id 8233, character id 8232, character id 12, character id 9, character id 8}, "")
 	-- AppleScript translates new lines in old mac returns so we need to turn that off
 	set appleCode to do shell script "echo " & quoted form of value & " \"\\c\"  |python2.7 -c  " & quoted form of s without altering line endings
-	set appleCode to replaceString(appleCode, "\\", "\\\\")
+	set appleCode to replaceString(replaceString(appleCode, "\\", "\\\\"), "\\\"", "\"")
 	set s to "on run " & return
 	set s to s & appleCode & return
 	set s to s & "end"
