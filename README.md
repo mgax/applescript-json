@@ -47,3 +47,25 @@ set my_dict_2 to json's createDictWith({ {"foo", "bar"}, {"baz", 22} })
 json's encode(my_dict_2)
 -- {"foo": "bar", "baz": 22}
 ```
+
+And also natively (which gives a small performance penalty):
+```applescript
+json's encode({glossary:¬
+		{GlossDiv:¬
+			{GlossList:¬
+				{GlossEntry:¬
+					{GlossDef:¬
+						{GlossSeeAlso:¬
+							["GML", "XML"], para:"A meta-markup language, used to create markup languages such as DocBook."} ¬
+							, GlossSee:"markup", Acronym:"SGML", GlossTerm:"Standard Generalized Markup Language", Abbrev:"ISO 8879:1986", SortAs:"SGML", id:¬
+						"SGML"} ¬
+						}, title:"S"} ¬
+				, title:"example glossary"} ¬
+			})
+```
+
+Decoding is also available (dictionaries with keys which contain spaces are not supported):
+```applescript
+set dict to {foo:"bar"}
+json's decode(json's encode(dict)) -- {foo: "bar"}
+```
