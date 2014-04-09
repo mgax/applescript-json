@@ -1,4 +1,5 @@
 on decodeWithDicts(value)
+	set value to replaceString(value, "\\", "\\\\")
 	set s to "import json, sys, codecs" & return
 	set s to s & "sys.stdin = codecs.getreader('utf8')(sys.stdin)" & return
 	set s to s & "def toAppleScript(pythonValue):" & return
@@ -13,8 +14,8 @@ on decodeWithDicts(value)
 	set s to s & "                first = False" & return
 	set s to s & "            else:" & return
 	set s to s & "                output += ','" & return
-	set s to s & "            output += '{' + json.dumps(key) + ',' " & return
-	set s to s & "            output += toAppleScript(value) + '}' " & return
+	set s to s & "            output += '{\\\"' + key + '\\\",' " & return
+	set s to s & "            output += toAppleScript(value) + '}'" & return
 	set s to s & "        output += '})'" & return
 	set s to s & "    elif (isinstance(pythonValue, list)):" & return
 	set s to s & "        output += '{'" & return
@@ -33,10 +34,11 @@ on decodeWithDicts(value)
 	set s to s & "    return output" & return
 	-- sys.stdout to be able to write utf8 to our buffer
 	-- We can ignore newlines in JSON format freely, as our \n will convert into new lines in bash we will use the actual new lines as the string \n
-	set s to s & "sys.stdout.write(toAppleScript(json.loads(sys.stdin.read().replace(\"\\n\", \"\\\\n\").replace(\"\\b\", \"\\\\b\").replace(\"\\f\", \"\\\\f\").replace(\"\\t\", \"\\\\t\").replace(\"\\r\", \"\\\\r\"))).encode('utf8'))"
-	set value to replaceString(value, {return & linefeed, return, linefeed, character id 8233, character id 8232}, "")
+	set s to s & "sys.stdout.write(toAppleScript(json.loads(sys.stdin.read())).encode('utf8'))"
+	set value to replaceString(value, {return & linefeed, return, linefeed, character id 8233, character id 8232, character id 12, character id 9, character id 8}, "")
 	-- AppleScript translates new lines in old mac returns so we need to turn that off
-	set appleCode to do shell script "echo " & quoted form of value & "  \"\\c\" |python2.7 -c  " & quoted form of s without altering line endings
+	set appleCode to do shell script "echo " & quoted form of value & " \"\\c\"  |python2.7 -c  " & quoted form of s without altering line endings
+	set appleCode to replaceString(appleCode, "\\", "\\\\")
 	set s to "on run {json}" & return
 	set s to s & appleCode & return
 	set s to s & "end"
@@ -44,6 +46,7 @@ on decodeWithDicts(value)
 end decodeWithDicts
 
 on decode(value)
+	set value to replaceString(value, "\\", "\\\\")
 	set s to "import json, sys, codecs" & return
 	set s to s & "sys.stdin = codecs.getreader('utf8')(sys.stdin)" & return
 	set s to s & "def toAppleScript(pythonValue):" & return
@@ -78,10 +81,11 @@ on decode(value)
 	set s to s & "    return output" & return
 	-- sys.stdout to be able to write utf8 to our buffer
 	-- We can ignore newlines in JSON format freely, as our \n will convert into new lines in bash we will use the actual new lines as the string \n
-	set s to s & "sys.stdout.write(toAppleScript(json.loads(sys.stdin.read().replace(\"\\n\", \"\\\\n\").replace(\"\\b\", \"\\\\b\").replace(\"\\f\", \"\\\\f\").replace(\"\\t\", \"\\\\t\").replace(\"\\r\", \"\\\\r\"))).encode('utf8'))"
+	set s to s & "sys.stdout.write(toAppleScript(json.loads(sys.stdin.read())).encode('utf8'))"
 	set value to replaceString(value, {return & linefeed, return, linefeed, character id 8233, character id 8232, character id 12, character id 9, character id 8}, "")
 	-- AppleScript translates new lines in old mac returns so we need to turn that off
 	set appleCode to do shell script "echo " & quoted form of value & " \"\\c\"  |python2.7 -c  " & quoted form of s without altering line endings
+	set appleCode to replaceString(appleCode, "\\", "\\\\")
 	set s to "on run " & return
 	set s to s & appleCode & return
 	set s to s & "end"
@@ -311,11 +315,12 @@ end recordToString
 on encodeRecord(value_record)
 	-- json can be used to escape a string for python
 	set strRepr to recordToString(value_record)
+	set strRepr to replaceString(strRepr, "\\\\", "\\\\\\\\")
 	set s to "import json, token, tokenize, sys, codecs" & return
 	set s to s & "from StringIO import StringIO" & return
 	set s to s & "sys.stdin = codecs.getreader('utf8')(sys.stdin)" & return
 	set s to s & "def appleScriptNotationToJSON (in_text):" & return
-	set s to s & "    in_text = in_text.replace(\"\\n\", \"\\\\n\")" & return
+	
 	set s to s & "    tokengen = tokenize.generate_tokens(StringIO(in_text).readline)" & return
 	set s to s & "    depth = 0" & return
 	set s to s & "    opstack = []" & return
@@ -327,7 +332,7 @@ on encodeRecord(value_record)
 	set s to s & "                tokval = u'\"%s\"' % tokval" & return
 	set s to s & "        elif (tokid == token.STRING):" & return
 	set s to s & "            if tokval.startswith (\"'\"):" & return
-	set s to s & "                tokval = u'\"%s\"' % tokval[1:-1].replace ('\"', '\\\\\"')" & return
+	set s to s & "                tokval = u'\"%s\"' % tokval[1:-1]" & return
 	set s to s & "        elif (tokid == token.OP) and ((tokval == '}') or (tokval == ']')):" & return
 	set s to s & "            if (len(result) > 0) and (result[-1][1] == ','):" & return
 	set s to s & "                result.pop()" & return
@@ -338,11 +343,8 @@ on encodeRecord(value_record)
 	set s to s & "            opstack.append(len(result))" & return
 	set s to s & "        elif (tokid == token.OP) and (tokval == ':') and result[opstack[-1]][1] != '}':" & return
 	set s to s & "            result[opstack[-1]] = (result[opstack[-1]][0], '{')" & return
-	set s to s & "        elif (tokid == token.STRING):" & return
-	set s to s & "            if tokval.startswith (\"'\"):" & return
-	set s to s & "                tokval = u'\"%s\"' % tokval[1:-1].replace ('\"', '\\\\\"')" & return
 	set s to s & "        result.append((tokid, tokval))" & return
 	set s to s & "    return tokenize.untokenize(result)" & return
-	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(sys.stdin.read()).replace(\"\\n\", \"\\\\n\").replace(\"\\b\", \"\\\\b\").replace(\"\\f\", \"\\\\f\").replace(\"\\t\", \"\\\\t\").replace(\"\\r\", \"\\\\r\")))" & return
+	set s to s & "print json.dumps(json.loads(appleScriptNotationToJSON(sys.stdin.read().replace(\"\\n\", \"\\\\n\").replace(\"\\b\", \"\\\\b\").replace(\"\\f\", \"\\\\f\").replace(\"\\t\", \"\\\\t\").replace(\"\\r\", \"\\\\r\"))))" & return
 	return (do shell script "echo " & quoted form of strRepr & "\"\\c\" | python2.7 -c " & quoted form of s)
 end encodeRecord
