@@ -1,6 +1,6 @@
 on encode(value)
 	set type to class of value
-	if type = integer
+	if type = integer or type = boolean
 		return value as text
 	else if type = text
 		return encodeString(value)
