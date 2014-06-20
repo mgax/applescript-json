@@ -25,6 +25,9 @@ assert_eq(json's hex4(65537), "0001")
 assert_eq(json's encode(1), "1")
 assert_eq(json's encode(0), "0")
 
+assert_eq(json's encode(true), "true")
+assert_eq(json's encode(false), "false")
+
 assert_eq(json's encode("foo"), "\"foo\"")
 assert_eq(json's encode(""), "\"\"")
 assert_eq(json's encode("\n"), "\"\\u000a\"")
