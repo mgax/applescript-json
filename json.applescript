@@ -26,7 +26,11 @@ end
 on encodeString(value)
 	set rv to ""
 	repeat with ch in value
-		if id of ch >= 32 and id of ch < 127
+		if id of ch = 34
+			set quoted_ch to "\\\""
+		else if id of ch = 92 then
+			set quoted_ch to "\\\\"
+		else if id of ch >= 32 and id of ch < 127
 			set quoted_ch to ch
 		else
 			set quoted_ch to "\\u" & hex4(id of ch)
