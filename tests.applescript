@@ -32,6 +32,8 @@ assert_eq(json's encode("foo"), "\"foo\"")
 assert_eq(json's encode(""), "\"\"")
 assert_eq(json's encode("\n"), "\"\\u000a\"")
 assert_eq(json's encode("ș"), "\"\\u0219\"")
+assert_eq(json's encode("\"bar\""), "\"\\\"bar\\\"\"")
+assert_eq(json's encode("\\"), "\"\\\\\"")
 
 assert_eq(json's encode({1, 2, 3}), "[1, 2, 3]")
 
