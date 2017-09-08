@@ -25,15 +25,22 @@ end
 
 on encodeString(value)
 	set rv to ""
-	repeat with ch in value
-		if id of ch = 34
+	set codepoints to id of value
+
+	if (class of codepoints) is not list
+		set codepoints to {codepoints}
+	end
+
+	repeat with codepoint in codepoints
+		set codepoint to codepoint as integer
+		if codepoint = 34
 			set quoted_ch to "\\\""
-		else if id of ch = 92 then
+		else if codepoint = 92 then
 			set quoted_ch to "\\\\"
-		else if id of ch >= 32 and id of ch < 127
-			set quoted_ch to ch
+		else if codepoint >= 32 and codepoint < 127
+			set quoted_ch to character id codepoint
 		else
-			set quoted_ch to "\\u" & hex4(id of ch)
+			set quoted_ch to "\\u" & hex4(codepoint)
 		end
 		set rv to rv & quoted_ch
 	end
